@@ -25,7 +25,7 @@
             <componentName>force:detailPanel</componentName>
         </componentInstances>
         <componentInstances>
-            <componentName>c:orderBuilder</componentName>
+            <componentName>orderBuilder</componentName>
         </componentInstances>
         <mode>Replace</mode>
         <name>detailTabContent</name>
@@ -84,7 +84,7 @@
                 <name>tilesAreDraggable</name>
                 <value>true</value>
             </componentInstanceProperties>
-            <componentName>c:productTileList</componentName>
+            <componentName>productTileList</componentName>
         </componentInstances>
         <mode>Replace</mode>
         <name>sidebar</name>
