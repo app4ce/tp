@@ -21,12 +21,13 @@ trigger ApexShareConfig on ApexShare_Config__c (before insert, before update) {
             apexSC.addError('Could not find the object '+ apexSC.Object_API_Name__c + '; Please check the Object API Name.');
             continue;
         }
+        DescribeSObjectResult objDef = objToken.getDescribe();
+        Map<String, SObjectField> fields = objDef.fields.getMap();
         
         // check the lookup api name for the same object
         if(rt_map.get(apexSC.recordTypeID).getName().containsIgnoreCase('Share with User')){
             System.debug('The current record type is Share with User');
-            DescribeSObjectResult objDef = objToken.getDescribe();
-            Map<String, SObjectField> fields = objDef.fields.getMap();
+            
             SObjectField fieldToken = fields.get(apexSC.Lookup_API_Name__c);
             if(fieldToken == NULL){
                 apexSC.addError('Could not find the field '+ apexSC.Lookup_API_Name__c + ' in the object '+ apexSC.Object_API_Name__c + '; Please check the User Lookup API Name.');
@@ -37,7 +38,11 @@ trigger ApexShareConfig on ApexShare_Config__c (before insert, before update) {
         // check the existence public group by its developer name
         else if(rt_map.get(apexSC.recordTypeID).getName().containsIgnoreCase('Share with Public Group')){
             System.debug('The current record type is Share with Public Group');
-            if(targetGroupMap.containsKey(apexSC.Group_Role_Name__c)){
+            SObjectField fieldToken = fields.get(apexSC.Criteria_Field_Name__c);
+            if(apexSC.Criteria_Field_Name__c != NULL && fieldToken == NULL){
+                apexSC.addError('Could not find the field '+ apexSC.Criteria_Field_Name__c + ' in the object '+ apexSC.Object_API_Name__c + '; Please check the User Lookup API Name.');
+            }
+            else if(targetGroupMap.containsKey(apexSC.Group_Role_Name__c)){
                 apexSC.Group_Role_Id__c = targetGroupMap.get(apexSC.Group_Role_Name__c).Id;
             }
             else apexSC.addError('Could not find the public group '+ apexSC.Group_Role_Name__c + '; Please check the public group developer name.');
