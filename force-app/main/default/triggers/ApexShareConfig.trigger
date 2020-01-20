@@ -27,11 +27,16 @@ trigger ApexShareConfig on ApexShare_Config__c (before insert, before update) {
         // check the lookup api name for the same object
         if(rt_map.get(apexSC.recordTypeID).getName().containsIgnoreCase('Share with User')){
             System.debug('The current record type is Share with User');
-            
-            SObjectField fieldToken = fields.get(apexSC.Lookup_API_Name__c);
-            if(fieldToken == NULL){
+            SObjectField criteriaFieldToken = fields.get(apexSC.Criteria_Field_Name__c);
+            if(apexSC.Criteria_Field_Name__c != NULL && criteriaFieldToken == NULL){
+                apexSC.addError('Could not find the field '+ apexSC.Criteria_Field_Name__c + ' in the object '+ apexSC.Object_API_Name__c + '; Please check the User Lookup API Name.');
+            }
+
+            SObjectField lookupFieldToken = fields.get(apexSC.Lookup_API_Name__c);
+            if(lookupFieldToken == NULL){
                 apexSC.addError('Could not find the field '+ apexSC.Lookup_API_Name__c + ' in the object '+ apexSC.Object_API_Name__c + '; Please check the User Lookup API Name.');
             }
+            //check for unique field system error
             apexSC.Object_Lookup_Combination__c = apexSC.Object_API_Name__c + apexSC.Lookup_API_Name__c;
         }
         

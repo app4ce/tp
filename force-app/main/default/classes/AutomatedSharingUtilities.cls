@@ -40,9 +40,15 @@ public class AutomatedSharingUtilities {
         }
     }
 
-    public static void deleteShareRecords(List<sObject> objectShares){
+    public static void deleteShareRecords(List<Id> recordIds, Set<String> sharingReasons){
         // Delete the sobject records
-        Database.DeleteResult[] drList = Database.delete(objectShares, false);
+        String objName = findObjectName(recordIds[0]);
+        String shareObjName = findShareObject(objName);
+        String deleteQueryString = 'SELECT Id, ParentId, UserOrGroupId, RowCause '+' FROM '+ shareObjName +
+                                    ' WHERE ParentId IN :recordIds AND RowCause IN :sharingReasons';
+        System.debug('Delete SOQL Query ' + deleteQueryString);
+        List<SObject> oldShareRecords = new List<SObject>(Database.query(deleteQueryString));
+        Database.DeleteResult[] drList = Database.delete(oldShareRecords, false);
 
         // Iterate through each returned result
         for(Database.DeleteResult dr : drList) {
@@ -71,6 +77,12 @@ public class AutomatedSharingUtilities {
         System.debug('The Share Object name is '+ shareObjectName);
 
         return shareObjectName;
+    }
+
+    public static String findObjectName(Id recordId){
+        Schema.SObjectType token = recordId.getSobjectType();
+        Schema.DescribeSObjectResult objResult = token.getDescribe();
+        return objResult.getName();
     }
 
 }

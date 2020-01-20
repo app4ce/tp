@@ -2,10 +2,9 @@ public class AutomatedGroupSharing {
     @InvocableMethod(label='Create Public Group Sharing Records' description='Creates public group sharing records based on the configs from ApexShare Config object')
     public static void createGroupShareRecords(List<Id> recordIds){
         //identify object type
-        Schema.SObjectType token = recordIds[0].getSobjectType();
-        Schema.DescribeSObjectResult objResult = token.getDescribe();
-        String objName = objResult.getName();
+        String objName = AutomatedSharingUtilities.findObjectName(recordIds[0]);
 
+        //find the Group Sharing record type
         Id RTId = Schema.SObjectType.ApexShare_Config__c.getRecordTypeInfosByName().get('Share with Public Group').getRecordTypeId();
 
         //get the ApexShare_Config object details
@@ -48,29 +47,13 @@ public class AutomatedGroupSharing {
         }
         Map<Id, SObject> recordIdSobjects;
         if(criteriaNames != NULL){
-            String queryString = 'SELECT Id, '+criteriaNames+' FROM '+objName+' WHERE Id IN :recordIds';
+            String queryString = 'SELECT Id, '+ criteriaNames +' FROM '+ objName +' WHERE Id IN :recordIds';
             System.debug('SOQL Query ' + queryString);
             recordIdSobjects = new Map<Id, SObject>(Database.query(queryString));
         }
         
         //delete existing share records for the same group
-        String shareObjName = AutomatedSharingUtilities.findShareObject(objName);
-        String deleteQueryString = 'SELECT Id, ParentId, UserOrGroupId, RowCause '+' FROM '+ shareObjName +
-                                    ' WHERE ParentId IN :recordIds AND RowCause IN :sharingReasons';
-        System.debug('Delete SOQL Query ' + deleteQueryString);
-        List<SObject> oldShareRecords = new List<SObject>(Database.query(deleteQueryString));
-        List<SObject> shareRecordsToDelete = new List<SObject>();
-        for(SObject sObj: oldShareRecords){ 
-            Id pId = (Id)sObj.get('ParentId');
-            Id uId = (Id)sObj.get('UserOrGroupId');
-            String reason = (String)sObj.get('RowCause');
-            for(Id recordId: recordIds){
-                for(ApexShare_Config__c apexSC: recordIdShareConfigs.get(pId)){
-                    if(pId == recordId && reason == apexSC.Apex_Sharing_Reason__c ) shareRecordsToDelete.add(sObj);
-                }
-            }  
-        }
-        AutomatedSharingUtilities.deleteShareRecords(shareRecordsToDelete);
+        AutomatedSharingUtilities.deleteShareRecords(recordIds, sharingReasons);
 
         //generate instances of share records for public group
         List<SObject> shareRecords = new List<SObject>();
@@ -93,6 +76,5 @@ public class AutomatedGroupSharing {
 
         //Create share records
         AutomatedSharingUtilities.insertShareRecords(shareRecords);
-
     }
 }
