@@ -59,18 +59,31 @@ public class AutomatedGroupSharing {
         List<SObject> shareRecords = new List<SObject>();
         for(Id recordId: recordIdShareConfigs.keyset()){
             for(ApexShare_Config__c apexsc: recordIdShareConfigs.get(recordId)){
+                // use criteria if it is provided in the config object
                 String criteriaValue = NULL;
-                if(apexSC.Criteria_Field_Name__c != NULL) criteriaValue = (String)recordIdSobjects.get(recordId).get(apexSC.Criteria_Field_Name__c);
-                if(apexSC.Criteria_Field_Value__c == criteriaValue && criteriaValue != NULL){
+                if(apexSC.Criteria_Field_Name__c != NULL){
+                    criteriaValue = (String)recordIdSobjects.get(recordId).get(apexSC.Criteria_Field_Name__c);
+                    if(apexSC.Criteria_Field_Value__c == criteriaValue && criteriaValue != NULL){
+                        Sobject sObj = AutomatedSharingUtilities.createShareObject(
+                        apexsc.Object_API_Name__c, 
+                        recordId,
+                        apexsc.Group_Role_ID__c, 
+                        apexsc.Access__c,
+                        apexsc.Apex_Sharing_Reason__c
+                        );
+                        shareRecords.add(sObj);
+                    }
+                } 
+                else {
                     Sobject sObj = AutomatedSharingUtilities.createShareObject(
-                    apexsc.Object_API_Name__c, 
-                    recordId,
-                    apexsc.Group_Role_ID__c, 
-                    apexsc.Access__c,
-                    apexsc.Apex_Sharing_Reason__c
-                    );
-                shareRecords.add(sObj);
-                }
+                        apexsc.Object_API_Name__c, 
+                        recordId,
+                        apexsc.Group_Role_ID__c, 
+                        apexsc.Access__c,
+                        apexsc.Apex_Sharing_Reason__c
+                        );
+                    shareRecords.add(sObj);
+                } 
             }
         }
 

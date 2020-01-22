@@ -75,9 +75,22 @@ public class AutomatedUserSharing {
         List<SObject> shareRecords = new List<SObject>();
         for(Id recordId: recordIdUserShareData.keyset()){
             for(RecordShareWithUser rswu: recordIdUserShareData.get(recordId)){
+                // use criteria if it is provided in the config object
                 String criteriaValue = NULL;
-                if(rswu.criteriaFieldName != NULL) criteriaValue = (String)recordIdSobjects.get(recordId).get(rswu.criteriaFieldName);
-                if(rswu.criteriaFieldValue == criteriaValue && criteriaValue != NULL){
+                if(rswu.criteriaFieldName != NULL){
+                    criteriaValue = (String)recordIdSobjects.get(recordId).get(rswu.criteriaFieldName);
+                    if(rswu.criteriaFieldValue == criteriaValue && criteriaValue != NULL){
+                        Sobject sObj = AutomatedSharingUtilities.createShareObject(
+                            rswu.ObjectAPIName, 
+                            recordId,
+                            rswu.lookupUserId,
+                            rswu.accessLevel,
+                            rswu.sharingReason
+                            );
+                    shareRecords.add(sObj);
+                    }
+                }
+                else {
                     Sobject sObj = AutomatedSharingUtilities.createShareObject(
                         rswu.ObjectAPIName, 
                         recordId,
@@ -87,6 +100,7 @@ public class AutomatedUserSharing {
                         );
                 shareRecords.add(sObj);
                 }
+                
             }
         }
 
