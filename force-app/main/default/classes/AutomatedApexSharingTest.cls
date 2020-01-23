@@ -218,11 +218,11 @@ private class AutomatedApexSharingTest{
         ApexSharingRecalculation asr3 = new ApexSharingRecalculation(recordId, true);
         String jobId3 = Database.executeBatch(asr3);
 
+        List<Id> ids = new List<Id>();
         for(ApexShare_Config__c apexsc: ascList){
-            if(apexsc.Name == 'Test New York Group Sharing Without Criteria') recordId = apexsc.Id;
+            if(apexsc.Name == 'Test New York Group Sharing Without Criteria') ids.add(apexsc.Id);
         }
-        ApexSharingRecalculation asr4 = new ApexSharingRecalculation(recordId, true);
-        String jobId4 = Database.executeBatch(asr4);
+        SharingRecalculationBatch.runBatchJob(ids);
     }
 
 }
