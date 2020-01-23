@@ -20,74 +20,76 @@ public class AutomatedGroupSharing {
                                                         FROM ApexShare_Config__c 
                                                         WHERE Object_API_Name__c = :objName AND RecordTypeId = :RTId AND Active__c = TRUE]);
 
-        //match SObject record id with respective ApexShare_Config records
-        Set<String> sharingReasons = new Set<String>();
-        Map<Id, List<ApexShare_Config__c>> recordIdShareConfigs = new Map<Id, List<ApexShare_Config__c>>();
-        for(Id recordId: recordIds){
-            List<ApexShare_Config__c> apexScList= new List<ApexShare_Config__c>();
-            for(ApexShare_Config__c apexsc: idShareConfigs.values()){
-                sharingReasons.add(apexsc.Apex_Sharing_Reason__c);
-                apexScList.add(apexsc);
+        if(idShareConfigs.keySet().size()>0){
+            //match SObject record id with respective ApexShare_Config records
+            Set<String> sharingReasons = new Set<String>();
+            Map<Id, List<ApexShare_Config__c>> recordIdShareConfigs = new Map<Id, List<ApexShare_Config__c>>();
+            for(Id recordId: recordIds){
+                List<ApexShare_Config__c> apexScList= new List<ApexShare_Config__c>();
+                for(ApexShare_Config__c apexsc: idShareConfigs.values()){
+                    sharingReasons.add(apexsc.Apex_Sharing_Reason__c);
+                    apexScList.add(apexsc);
+                }
+                recordIdShareConfigs.put(recordId, apexScList);
             }
-            recordIdShareConfigs.put(recordId, apexScList);
-        }
 
-        //get all the criteria field api names to create a dynamic soql
-        Set<String> allCriteria = new Set<String>();
-        for(ApexShare_Config__c apexSC: idShareConfigs.values()){
-            allCriteria.add(apexSC.Criteria_Field_Name__c);
-        }
-
-        String criteriaNames = NULL;
-        for(String str: allCriteria){
-            if(str != NULL){
-                if(criteriaNames == NULL) criteriaNames = str;
-                else criteriaNames = criteriaNames + ', ' + str;
+            //get all the criteria field api names to create a dynamic soql
+            Set<String> allCriteria = new Set<String>();
+            for(ApexShare_Config__c apexSC: idShareConfigs.values()){
+                allCriteria.add(apexSC.Criteria_Field_Name__c);
             }
-        }
-        Map<Id, SObject> recordIdSobjects;
-        if(criteriaNames != NULL){
-            String queryString = 'SELECT Id, '+ criteriaNames +' FROM '+ objName +' WHERE Id IN :recordIds';
-            System.debug('SOQL Query ' + queryString);
-            recordIdSobjects = new Map<Id, SObject>(Database.query(queryString));
-        }
-        
-        //delete existing share records for the same group
-        AutomatedSharingUtilities.deleteShareRecords(recordIds, sharingReasons);
 
-        //generate instances of share records for public group
-        List<SObject> shareRecords = new List<SObject>();
-        for(Id recordId: recordIdShareConfigs.keyset()){
-            for(ApexShare_Config__c apexsc: recordIdShareConfigs.get(recordId)){
-                // use criteria if it is provided in the config object
-                String criteriaValue = NULL;
-                if(apexSC.Criteria_Field_Name__c != NULL){
-                    criteriaValue = (String)recordIdSobjects.get(recordId).get(apexSC.Criteria_Field_Name__c);
-                    if(apexSC.Criteria_Field_Value__c == criteriaValue && criteriaValue != NULL){
+            String criteriaNames = NULL;
+            for(String str: allCriteria){
+                if(str != NULL){
+                    if(criteriaNames == NULL) criteriaNames = str;
+                    else criteriaNames = criteriaNames + ', ' + str;
+                }
+            }
+            Map<Id, SObject> recordIdSobjects;
+            if(criteriaNames != NULL){
+                String queryString = 'SELECT Id, '+ criteriaNames +' FROM '+ objName +' WHERE Id IN :recordIds';
+                System.debug('SOQL Query ' + queryString);
+                recordIdSobjects = new Map<Id, SObject>(Database.query(queryString));
+            }
+            
+            //delete existing share records for the same group
+            AutomatedSharingUtilities.deleteShareRecords(recordIds, sharingReasons);
+
+            //generate instances of share records for public group
+            List<SObject> shareRecords = new List<SObject>();
+            for(Id recordId: recordIdShareConfigs.keyset()){
+                for(ApexShare_Config__c apexsc: recordIdShareConfigs.get(recordId)){
+                    // use criteria if it is provided in the config object
+                    String criteriaValue = NULL;
+                    if(apexSC.Criteria_Field_Name__c != NULL){
+                        criteriaValue = (String)recordIdSobjects.get(recordId).get(apexSC.Criteria_Field_Name__c);
+                        if(apexSC.Criteria_Field_Value__c == criteriaValue && criteriaValue != NULL){
+                            Sobject sObj = AutomatedSharingUtilities.createShareObject(
+                            apexsc.Object_API_Name__c, 
+                            recordId,
+                            apexsc.Group_Role_ID__c, 
+                            apexsc.Access__c,
+                            apexsc.Apex_Sharing_Reason__c
+                            );
+                            shareRecords.add(sObj);
+                        }
+                    } 
+                    else {
                         Sobject sObj = AutomatedSharingUtilities.createShareObject(
-                        apexsc.Object_API_Name__c, 
-                        recordId,
-                        apexsc.Group_Role_ID__c, 
-                        apexsc.Access__c,
-                        apexsc.Apex_Sharing_Reason__c
-                        );
+                            apexsc.Object_API_Name__c, 
+                            recordId,
+                            apexsc.Group_Role_ID__c, 
+                            apexsc.Access__c,
+                            apexsc.Apex_Sharing_Reason__c
+                            );
                         shareRecords.add(sObj);
-                    }
-                } 
-                else {
-                    Sobject sObj = AutomatedSharingUtilities.createShareObject(
-                        apexsc.Object_API_Name__c, 
-                        recordId,
-                        apexsc.Group_Role_ID__c, 
-                        apexsc.Access__c,
-                        apexsc.Apex_Sharing_Reason__c
-                        );
-                    shareRecords.add(sObj);
-                } 
+                    } 
+                }
             }
-        }
 
-        //Create share records
-        AutomatedSharingUtilities.insertShareRecords(shareRecords);
+            //Create share records
+            AutomatedSharingUtilities.insertShareRecords(shareRecords);
+        }
     }
 }

@@ -51,7 +51,7 @@ private class AutomatedApexSharingTest{
         ascTest2.Name = 'Test User Sharing without Criteria';
         ascTest2.Object_API_Name__c = 'ApexShare_Test__c';
         ascTest2.RecordTypeId = uRTId;
-        ascTest2.Access__c = 'Edit';
+        ascTest2.Access__c = 'Read';
         ascTest2.Lookup_API_Name__c = 'Hiring_Manager__c';
         ascTest2.Apex_Sharing_Reason__c = 'Hiring_Manager__c';
         ascTest2.Criteria_Field_Name__c = NULL;
@@ -83,7 +83,7 @@ private class AutomatedApexSharingTest{
         shareConfigs.add(ascTest3);
 
         ApexShare_Config__c ascTest4 = new ApexShare_Config__c();
-        ascTest4.Name = 'Test New York Group Sharing';
+        ascTest4.Name = 'Test New York Group Sharing Without Criteria';
         ascTest4.Object_API_Name__c = 'ApexShare_Test__c';
         ascTest4.RecordTypeId = gRTId;
         ascTest4.Access__c = 'Edit';
@@ -93,6 +93,7 @@ private class AutomatedApexSharingTest{
         ascTest4.Criteria_Field_Value__c = NULL;
         ascTest4.Active__c = TRUE;
         shareConfigs.add(ascTest4);
+        insert shareConfigs;
 
         List<ApexShare_Test__c> testRecords = new List<ApexShare_Test__c>();
         ApexShare_Test__c astTest1 = new ApexShare_Test__c();
@@ -116,22 +117,112 @@ private class AutomatedApexSharingTest{
         update apexSCList;
     }
 
-    static testMethod void testUserSharing(){
+    //test user sharing features
+    static testMethod void testSharing(){
         Map<Id, ApexShare_Test__c> testRecords = new Map<Id, ApexShare_Test__c>([SELECT Id, Recruiter__c, Hiring_Manager__c FROM ApexShare_Test__c]);
         List<Id> recordIds = new List<Id>();
         for(ApexShare_Test__c rec: testRecords.values()){
-            if(rec.Recruiter__c != NULL && rec.Hiring_Manager__c != NULL) recordIds.add(rec.Id);
+            recordIds.add(rec.Id);
         }
         AutomatedUserSharing.createUserShareRecords(recordIds);
+        AutomatedGroupSharing.creategroupShareRecords(recordIds);
+
+        // This query returns jobs and related sharing records that were inserted       
+        // by the batch job's execute method.     
+        List<ApexShare_Test__c> jobs = [SELECT Id, Name, Hiring_Manager__c, Recruiter__c, 
+            (SELECT Id, ParentId, UserOrGroupId, AccessLevel, RowCause FROM Shares 
+            WHERE (RowCause = :Schema.ApexShare_Test__Share.rowCause.Recruiter__c OR 
+            RowCause = :Schema.ApexShare_Test__Share.rowCause.Hiring_Manager__c OR 
+            RowCause = :Schema.ApexShare_Test__Share.rowCause.California_Group__c OR 
+            RowCause = :Schema.ApexShare_Test__Share.rowCause.New_York_Group__c))
+            FROM ApexShare_Test__c];
+        
+        List<Id> newShareIds = new List<Id>();
+        for(ApexShare_Test__c job : jobs){
+            for(ApexShare_Test__Share jobShr : job.Shares){
+               // Test the sharing record for hiring manager on job.             
+                if(jobShr.RowCause == Schema.ApexShare_Test__Share.RowCause.Hiring_Manager__c){
+                    System.assertEquals(jobShr.UserOrGroupId,job.Hiring_Manager__c);
+                    System.assertEquals(jobShr.AccessLevel,'Read');
+                    if(job.Name == 'Michelle Lambert') newShareIds.add(jobShr.Id);
+                }
+                // Test the sharing record for recruiter on job.
+                else if(jobShr.RowCause == Schema.ApexShare_Test__Share.RowCause.Recruiter__c){
+                    System.assertEquals(jobShr.UserOrGroupId,job.Recruiter__c);
+                    System.assertEquals(jobShr.AccessLevel,'Edit');
+                    if(job.Name == 'Michelle Lambert') newShareIds.add(jobShr.Id);
+                }
+                else if(jobShr.RowCause == Schema.ApexShare_Test__Share.RowCause.California_Group__c){
+                    System.assertEquals(jobShr.AccessLevel,'Edit');
+                    if(job.Name == 'Michelle Lambert') newShareIds.add(jobShr.Id);
+                }
+                else if(jobShr.RowCause == Schema.ApexShare_Test__Share.RowCause.New_York_Group__c){
+                    System.assertEquals(jobShr.AccessLevel,'Edit');
+                    if(job.Name == 'Michelle Lambert') newShareIds.add(jobShr.Id);
+                }
+            }
+        }
+        //check total number of share records
+        System.assert(newShareIds.size() == 4);
     }
 
-    //test user sharing features
+    //test sharing recalculation
+    static testMethod void testRecalculation(){
+        List<ApexShare_Config__c> ascList = [SELECT Id, Name FROM ApexShare_Config__c];
+        Id recordId = NULL;
+        for(ApexShare_Config__c apexsc: ascList){
+            if(apexsc.Name == 'Test User Sharing with Criteria') recordId = apexsc.Id;
+        }
+        ApexSharingRecalculation asr = new ApexSharingRecalculation(recordId, true);
+        String jobId = Database.executeBatch(asr);
 
-    //test group sharing features
+        // Get the Apex job and verify there are no errors.
+        AsyncApexJob aaj = [Select JobType, TotalJobItems, JobItemsProcessed, Status, 
+                            CompletedDate, CreatedDate, NumberOfErrors 
+                            from AsyncApexJob where Id = :jobId];
+        System.assertEquals(0, aaj.NumberOfErrors);
+      
+        // This query returns jobs and related sharing records that were inserted       
+        // by the batch job's execute method.     
+        List<ApexShare_Test__c> jobs = [SELECT Id, Name, Hiring_Manager__c, Recruiter__c, 
+            (SELECT Id, ParentId, UserOrGroupId, AccessLevel, RowCause FROM Shares 
+            WHERE (RowCause = :Schema.ApexShare_Test__Share.rowCause.Recruiter__c OR 
+            RowCause = :Schema.ApexShare_Test__Share.rowCause.Hiring_Manager__c ))
+            FROM ApexShare_Test__c WHERE Name = 'Michelle Lambert'];       
+        
+        // Validate that Apex managed sharing exists on jobs.     
+        for(ApexShare_Test__c job : jobs){
+            for(ApexShare_Test__Share jobShr : job.Shares){
+               // Test the sharing record for hiring manager on job.             
+                if(jobShr.RowCause == Schema.ApexShare_Test__Share.RowCause.Hiring_Manager__c){
+                    System.assertEquals(jobShr.UserOrGroupId,job.Hiring_Manager__c);
+                    System.assertEquals(jobShr.AccessLevel,'Read');
+                }
+                // Test the sharing record for recruiter on job.
+                else if(jobShr.RowCause == Schema.ApexShare_Test__Share.RowCause.Recruiter__c){
+                    System.assertEquals(jobShr.UserOrGroupId,job.Recruiter__c);
+                    System.assertEquals(jobShr.AccessLevel,'Edit');
+                }
+            }
+        }
 
-    //test sharing recalculation for users
+        for(ApexShare_Config__c apexsc: ascList){
+            if(apexsc.Name == 'Test User Sharing without Criteria') recordId = apexsc.Id;
+        }
+        ApexSharingRecalculation asr2 = new ApexSharingRecalculation(recordId, true);
+        String jobId2 = Database.executeBatch(asr2);
 
-    //test sharing recalculation for groups
+        for(ApexShare_Config__c apexsc: ascList){
+            if(apexsc.Name == 'Test California Group Sharing') recordId = apexsc.Id;
+        }
+        ApexSharingRecalculation asr3 = new ApexSharingRecalculation(recordId, true);
+        String jobId3 = Database.executeBatch(asr3);
 
+        for(ApexShare_Config__c apexsc: ascList){
+            if(apexsc.Name == 'Test New York Group Sharing Without Criteria') recordId = apexsc.Id;
+        }
+        ApexSharingRecalculation asr4 = new ApexSharingRecalculation(recordId, true);
+        String jobId4 = Database.executeBatch(asr4);
+    }
 
 }
