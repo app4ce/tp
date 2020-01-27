@@ -35,13 +35,13 @@ private class AutomatedApexSharingTest{
         Id uRTId = Schema.SObjectType.ApexShare_Config__c.getRecordTypeInfosByName().get('Share with User').getRecordTypeId();
         Id gRTId = Schema.SObjectType.ApexShare_Config__c.getRecordTypeInfosByName().get('Share with Public Group').getRecordTypeId();
         List<ApexShare_Config__c> shareConfigs = new List<ApexShare_Config__c>();
-        ApexShare_Config__c ascTest1 = new ApexShare_Config__c();
+        ApexShare_Config__c ascTest1 = new ApexShare_Config__c(); 
         ascTest1.Name = 'Test User Sharing with Criteria';
-        ascTest1.Object_API_Name__c = 'ApexShare_Test__c';
+        ascTest1.Object_API_Name__c = 'pvcg__ApexShare_Test__c';
         ascTest1.RecordTypeId = uRTId;
         ascTest1.Access__c = 'Edit';
-        ascTest1.Lookup_API_Name__c = 'Recruiter__c';
-        ascTest1.Apex_Sharing_Reason__c = 'Recruiter__c';
+        ascTest1.Lookup_API_Name__c = 'pvcg__Recruiter__c';
+        ascTest1.Apex_Sharing_Reason__c = 'pvcg__Recruiter__c';
         ascTest1.Criteria_Field_Name__c = 'Name';
         ascTest1.Criteria_Field_Value__c = 'Michelle Lambert';
         ascTest1.Active__c = TRUE;
@@ -49,11 +49,11 @@ private class AutomatedApexSharingTest{
 
         ApexShare_Config__c ascTest2 = new ApexShare_Config__c();
         ascTest2.Name = 'Test User Sharing without Criteria';
-        ascTest2.Object_API_Name__c = 'ApexShare_Test__c';
+        ascTest2.Object_API_Name__c = 'pvcg__ApexShare_Test__c';
         ascTest2.RecordTypeId = uRTId;
         ascTest2.Access__c = 'Read';
-        ascTest2.Lookup_API_Name__c = 'Hiring_Manager__c';
-        ascTest2.Apex_Sharing_Reason__c = 'Hiring_Manager__c';
+        ascTest2.Lookup_API_Name__c = 'pvcg__Hiring_Manager__c';
+        ascTest2.Apex_Sharing_Reason__c = 'pvcg__Hiring_Manager__c';
         ascTest2.Criteria_Field_Name__c = NULL;
         ascTest2.Criteria_Field_Value__c = NULL;
         ascTest2.Active__c = TRUE;
@@ -72,11 +72,11 @@ private class AutomatedApexSharingTest{
         
         ApexShare_Config__c ascTest3 = new ApexShare_Config__c();
         ascTest3.Name = 'Test California Group Sharing';
-        ascTest3.Object_API_Name__c = 'ApexShare_Test__c';
+        ascTest3.Object_API_Name__c = 'pvcg__ApexShare_Test__c';
         ascTest3.RecordTypeId = gRTId;
         ascTest3.Access__c = 'Edit';
         ascTest3.Group_Role_Name__c = 'California';
-        ascTest3.Apex_Sharing_Reason__c = 'California_Group__c';
+        ascTest3.Apex_Sharing_Reason__c = 'pvcg__California_Group__c';
         ascTest3.Criteria_Field_Name__c = 'Name';
         ascTest3.Criteria_Field_Value__c = 'Michelle Lambert';
         ascTest3.Active__c = TRUE;
@@ -84,11 +84,11 @@ private class AutomatedApexSharingTest{
 
         ApexShare_Config__c ascTest4 = new ApexShare_Config__c();
         ascTest4.Name = 'Test New York Group Sharing Without Criteria';
-        ascTest4.Object_API_Name__c = 'ApexShare_Test__c';
+        ascTest4.Object_API_Name__c = 'pvcg__ApexShare_Test__c';
         ascTest4.RecordTypeId = gRTId;
         ascTest4.Access__c = 'Edit';
         ascTest4.Group_Role_Name__c = 'New_York';
-        ascTest4.Apex_Sharing_Reason__c = 'New_York_Group__c';
+        ascTest4.Apex_Sharing_Reason__c = 'pvcg__New_York_Group__c';
         ascTest4.Criteria_Field_Name__c = NULL;
         ascTest4.Criteria_Field_Value__c = NULL;
         ascTest4.Active__c = TRUE;
